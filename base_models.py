@@ -9,9 +9,10 @@ class Model:
     def __init__(
         self, 
         model_type: Literal['gnb', 'nn', 'xgb'],
-        xgb_params = None, 
+        xgb_params = {}, 
         nn_params = None, 
     ):
+
         self.model_type = model_type
         if self.model_type == 'gnb':
             self.model = GaussianNB()
@@ -22,14 +23,14 @@ class Model:
 
 
     def fit(
-        self, X_train, y_train, X_val=None, y_val=None
+        self, X_train, y_train, X_val=None, y_val=None, verbose=1
     ) -> None:
         if self.model_type in ['gnb', 'xgb']: 
             self.model.fit(X_train, y_train)
 
         elif self.model_type == 'nn':
             self.model.fit(
-                X_train, y_train, epochs=20, batch_size=16, verbose=1, validation_data=(X_val, y_val)
+                X_train, y_train, epochs=20, batch_size=16, verbose=verbose, validation_data=(X_val, y_val)
             )
 
 

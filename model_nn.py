@@ -3,7 +3,7 @@ from data import *
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout
+from tensorflow.keras.layers import Input, Dense, Dropout
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score
@@ -20,7 +20,8 @@ def scale_data(X_train, X_test):
 # Define neural network model function
 def create_nn_model(input_dim):
     model = Sequential([
-        Dense(64, activation='relu', input_shape=(input_dim,)),
+        Input(shape=(input_dim,)),  # Explicitly define input layer
+        Dense(64, activation='relu'),
         Dropout(0.3),
         Dense(32, activation='relu'),
         Dropout(0.2),

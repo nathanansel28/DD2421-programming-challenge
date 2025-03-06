@@ -27,6 +27,7 @@ def soft_voting(
     else:
         raise ValueError("mean_type must be either 'arithmetic' or 'geometric'")
 
+    weighted_proba /= np.sum(weighted_proba, axis=1, keepdims=True)
     weighted_pred = np.argmax(weighted_proba, axis=1)
 
     return weighted_pred, weighted_proba
@@ -47,7 +48,8 @@ def train_ensemble(
         "random_state": 42
     },
     mean_type: Literal['geometric', 'arithmetic'] = 'arithmetic',
-    k: int = 5
+    k: int = 5, 
+    verbose: int = 0
 ):
 
     X_train, X_val, y_train, y_val = train_test_split(
@@ -61,7 +63,7 @@ def train_ensemble(
 
     xgb_model.fit(X_train, y_train)
     gnb_model.fit(X_train, y_train)
-    nn_model.fit(X_train_scaled, y_train, X_val=X_val_scaled, y_val=y_val)
+    nn_model.fit(X_train_scaled, y_train, X_val=X_val_scaled, y_val=y_val, verbose=verbose)
 
     xgb_y_val_pred, xgb_y_val_proba = xgb_model.predict(X_val) 
     gnb_y_val_pred, gnb_y_val_proba = gnb_model.predict(X_val) 
