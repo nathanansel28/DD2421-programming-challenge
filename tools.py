@@ -1,5 +1,6 @@
 from data import *
 from model_nn import *
+from base_models import Model
 
 import xgboost as xgb
 from typing import List, Union, Optional, Literal
@@ -15,7 +16,7 @@ def train_kcv(
     X_train: np.ndarray,
     y_train: np.ndarray,
     k: int = 5,
-    params: dict = {
+    xgb_params: dict = {
         "objective": "multi:softmax",
         "num_class": len(np.unique(y_train)),
         "eval_metric": "mlogloss",
@@ -30,7 +31,7 @@ def train_kcv(
 
     cv_accuracies = []
     cv_log_losses = []
-    kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    kf = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
 
     if model_type == 'nn':
         X_train = scaler.fit_transform(X_train)
@@ -42,25 +43,9 @@ def train_kcv(
             X_train_fold, X_val_fold = X_train.iloc[train_idx], X_train.iloc[val_idx]
         y_train_fold, y_val_fold = y_train[train_idx], y_train[val_idx]
 
-        if model_type in ['gnb', 'xgb']: 
-            if model_type == 'gnb': 
-                model = GaussianNB()
-            elif model_type == 'xgb': 
-                model = xgb.XGBClassifier(**params)
-            model.fit(X_train_fold, y_train_fold)
-
-            y_val_pred = model.predict(X_val_fold)
-            y_val_proba = model.predict_proba(X_val_fold)
-
-
-        elif model_type == 'nn': 
-            model = create_nn_model(X_train.shape[1])
-            model.fit(
-                X_train_fold, y_train_fold, epochs=20, batch_size=16, verbose=1, validation_data=(X_val_fold, y_val_fold)
-            )
-
-            y_val_proba = model.predict(X_val_fold)
-            y_val_pred = np.argmax(y_val_proba, axis=1)
+        model = Model(model_type=model_type, xgb_params=xgb_params, nn_params=X_train_fold.shape[1])
+        model.fit(X_train_fold, y_train_fold, X_val=X_val_fold, y_val=y_val_fold)
+        y_val_pred, y_val_proba = model.predict(X_val_fold) 
 
         cv_accuracies.append(accuracy_score(y_val_fold, y_val_pred))
         cv_log_losses.append(log_loss(y_val_fold, y_val_proba))
@@ -68,14 +53,4 @@ def train_kcv(
 
     print(f"Cross-validation accuracy: {np.mean(cv_accuracies):.4f} ± {np.std(cv_accuracies):.4f}")
     print(f"Cross-validation log loss: {np.mean(cv_log_losses):.4f} ± {np.std(cv_log_losses):.4f}")
-
-
-
-
-
-
-
-
-
-
 
