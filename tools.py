@@ -12,7 +12,7 @@ from sklearn.metrics import accuracy_score, log_loss
 
 
 def train_kcv(
-    model_type: Literal['gnb', 'nn', 'xgb'],
+    model_type: Literal['gnb', 'nn', 'xgb', 'rf'],
     X_train: np.ndarray,
     y_train: np.ndarray,
     k: int = 5,
@@ -26,7 +26,8 @@ def train_kcv(
         "subsample": 0.8,
         "colsample_bytree": 0.8,
         "random_state": 42
-    }
+    }, 
+    rf_params: dict = {}
 ):
 
     cv_accuracies = []
@@ -43,7 +44,12 @@ def train_kcv(
             X_train_fold, X_val_fold = X_train.iloc[train_idx], X_train.iloc[val_idx]
         y_train_fold, y_val_fold = y_train[train_idx], y_train[val_idx]
 
-        model = Model(model_type=model_type, xgb_params=xgb_params, nn_params=X_train_fold.shape[1])
+        model = Model(
+            model_type=model_type, 
+            xgb_params=xgb_params, 
+            nn_params=X_train_fold.shape[1],
+            rf_params=rf_params
+        )
         model.fit(X_train_fold, y_train_fold, X_val=X_val_fold, y_val=y_val_fold)
         y_val_pred, y_val_proba = model.predict(X_val_fold) 
 
