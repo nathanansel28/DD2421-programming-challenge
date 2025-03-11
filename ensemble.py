@@ -9,6 +9,72 @@ from itertools import product
 import json
 
 
+
+class Ensemble: 
+    def __init__(
+        self, 
+        models: List[Model] = None, 
+        model_weights: np.ndarray = None
+    ):
+        if models is None: 
+            self.manual = True
+            self.xgb_model = Model(model_type='xgb', xgb_params=xgb_params)
+            self.gnb_model = Model(model_type='gnb', selected_features=['x2', 'x3', 'x4', 'x6', 'x8', 'x9', 'x10', 'x11'])
+            self.nn_model = Model(model_type='nn', nn_params=X.shape[1]) # TODO: replace with correct parameter later
+            self.rf_model = Model(model_type='rf', rf_params=rf_params)
+        else: 
+            self.manual = False
+            self.models = models
+        if model_weights is None: 
+            self.model_weights = np.array([0.25, 0.25, 0.25, 0.25])
+        else: 
+            self.model_weights = model_weights
+
+
+    def fit(
+        self, X_train, y_train, X_val, y_val
+    ) -> None:
+        X_train_scaled, X_val_scaled = scale_data(X_train, X_val)
+
+        if self.manual:
+            self.xgb_model.fit(X_train, y_train)
+            self.gnb_model.fit(X_train, y_train)
+            self.nn_model.fit(X_train_scaled, y_train, X_val=X_val_scaled, y_val=y_val, verbose=0)
+            self.rf_model.fit(X_train, y_train)
+        else: 
+            for model in self.models: 
+                if model.model_type == 'nn':
+                    model.fit(X_train_scaled, y_train, X_val=X_val_scaled, y_val=y_val, verbose=0)
+                else: 
+                    model.fit(X_train, y_train)
+    
+
+    def predict(
+        self, X_pred, weights=None, mean_type='arithmetic'
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        _, X_pred_scaled = scale_data(X_pred, X_pred)
+
+        if self.manual:
+            models_predictions = [
+                self.xgb_model.predict(X_pred)[1], 
+                self.gnb_model.predict(X_pred)[1], 
+                self.nn_model.predict(X_pred_scaled)[1], 
+                self.rf_model.predict(X_pred)[1]
+            ]
+        else: 
+            models_predictions = []
+            for model in self.models: 
+                if model.model_type == 'nn':
+                    models_predictions.append(model.predict(X_pred_scaled)[1])
+                else: 
+                    models_predictions.append(model.predict(X_pred)[1])
+
+        weights = self.model_weights if weights is None else weights
+        return soft_voting(
+            list_X_preds=models_predictions, weights=weights, mean_type=mean_type
+        )
+
+
 def soft_voting(
     list_X_preds: List[np.ndarray],
     weights: List[float] = None,
@@ -186,4 +252,4 @@ def show_top_weights(final_results, n_top=5):
               f"Mean Accuracy: {result['mean_accuracy']:.3f} | "
               f"Std Accuracy: {result['std_accuracy']:.3f} | "
               f"Mean Log Loss: {result['mean_log_loss']:.3f} | "
-              f"Std Log Loss: {result['std_log_loss']:.3f}")
+              f"Std Log Loss: {result['std_log_loss']:.3f}\n")
