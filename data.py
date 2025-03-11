@@ -8,8 +8,8 @@ import seaborn as sns
 from sklearn.preprocessing import LabelEncoder
 
 features = [f"x{i}" for i in range(1, 14)]
-train_raw = pd.read_csv('data//TrainOnMe.csv')[['y']+features]
-test_raw = pd.read_csv('data//EvaluateOnMe.csv')[features]
+train_raw = pd.read_csv('TrainOnMe.csv')[['y']+features]
+test_raw = pd.read_csv('EvaluateOnMe.csv')[features]
 
 """
 ===================
