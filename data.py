@@ -28,8 +28,6 @@ y_train = label_encoder.fit_transform(y_train)  # Converts ['Anthropic', 'OpenAI
 
 # Convert BOOLEAN columns to integers
 bool_cols = X_train.select_dtypes(include=['bool']).columns
-# X_train[bool_cols] = X_train[bool_cols].astype(int)
-# X_test[bool_cols] = X_test[bool_cols].astype(int)
 X_train = X_train.astype({col: 'int32' for col in bool_cols})  # Convert before assignment
 X_test = X_test.astype({col: 'int32' for col in bool_cols})
 
