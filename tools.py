@@ -1,6 +1,6 @@
 from data import *
 from model_nn import *
-from base_models import Model
+from base_models import Model, Features
 
 import xgboost as xgb
 from typing import List, Union, Optional, Literal
@@ -15,6 +15,7 @@ def train_kcv(
     model_type: Literal['gnb', 'nn', 'xgb', 'rf'],
     X_train: np.ndarray,
     y_train: np.ndarray,
+    selected_features: List[Features] = None,
     k: int = 5,
     xgb_params: dict = {
         "objective": "multi:softmax",
@@ -46,6 +47,7 @@ def train_kcv(
 
         model = Model(
             model_type=model_type, 
+            selected_features=selected_features,
             xgb_params=xgb_params, 
             nn_params=X_train_fold.shape[1],
             rf_params=rf_params
