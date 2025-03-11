@@ -3,8 +3,10 @@ from model_nn import *
 from base_models import Model
 
 from typing import Literal, List, Tuple
-from sklearn.model_selection import StratifiedKFold, train_test_split
+from sklearn.model_selection import StratifiedKFold, train_test_split, StratifiedShuffleSplit
 from sklearn.metrics import accuracy_score, log_loss
+from itertools import product
+import json
 
 
 def soft_voting(
@@ -41,223 +43,56 @@ def soft_voting(
 
 
 
+possible_models = ['xgb', 'gnb', 'nn', 'rf']
+with open('params_xgb.json', 'r') as file:
+    xgb_params = json.load(file)
 
-        
-# def train_ensemble(
-#     X, 
-#     y,
-#     xgb_params: dict,
-#     mean_type: Literal['geometric', 'arithmetic'] = 'arithmetic',
-#     k: int = 5,  # k-fold cross-validation
-#     verbose: int = 0
-# ):
-
-#     # Split the data using StratifiedKFold
-#     kf = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
-    
-#     results = []
-#     weight_options = np.linspace(0, 1, 21)  # 0 to 1 in steps of 0.05
-#     for train_idx, val_idx in kf.split(X, y):
-#         y_train, y_val = y[train_idx], y[val_idx]
-#         X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
-
-
-#         X_train_scaled, X_val_scaled = scale_data(X_train, X_val)
-
-#         # Create and fit the models
-#         xgb_model = Model(model_type='xgb', xgb_params=xgb_params)
-#         gnb_model = Model(model_type='gnb')
-#         nn_model = Model(model_type='nn', nn_params=X_train_scaled.shape[1])
-
-#         xgb_model.fit(X_train, y_train)
-#         gnb_model.fit(X_train, y_train)
-#         nn_model.fit(X_train_scaled, y_train, X_val=X_val_scaled, y_val=y_val, verbose=verbose)
-
-#         # Predict on validation set
-#         xgb_y_val_pred, xgb_y_val_proba = xgb_model.predict(X_val)
-#         gnb_y_val_pred, gnb_y_val_proba = gnb_model.predict(X_val)
-#         nn_y_val_pred, nn_y_val_proba = nn_model.predict(X_val_scaled)
-
-#         # Loop through weight options to find the best weights
-#         for w_xgb in weight_options:
-#             for w_gnb in weight_options:
-#                 if w_xgb + w_gnb <= 1:
-#                     w_nn = 1 - (w_xgb + w_gnb)
-
-#                     weighted_y_val_pred, weighted_y_val_proba = soft_voting(
-#                         list_X_preds=[xgb_y_val_proba, gnb_y_val_proba, nn_y_val_proba],
-#                         weights=[w_xgb, w_gnb, w_nn],
-#                         mean_type=mean_type
-#                     )
-
-#                     results.append({
-#                         'fold': len(results) // (len(weight_options) * len(weight_options)),
-#                         'weights': (w_xgb, w_gnb, w_nn),
-#                         'accuracy': accuracy_score(y_val, weighted_y_val_pred), 
-#                         'log_loss': log_loss(y_val, weighted_y_val_proba)
-#                     })
-
-#     # Calculate mean and std deviation for accuracy and log-loss across all folds
-#     accuracies = [result['accuracy'] for result in results]
-#     log_losses = [result['log_loss'] for result in results]
-
-#     mean_accuracy = np.mean(accuracies)
-#     std_accuracy = np.std(accuracies)
-#     mean_log_loss = np.mean(log_losses)
-#     std_log_loss = np.std(log_losses)
-
-#     # Store these mean and std values
-#     final_results = {
-#         'mean_accuracy': mean_accuracy,
-#         'std_accuracy': std_accuracy,
-#         'mean_log_loss': mean_log_loss,
-#         'std_log_loss': std_log_loss,
-#         'results': results  # This includes individual fold results for reference
-#     }
-
-#     # Get the best result based on log_loss
-#     best_result = min(results, key=lambda x: x['log_loss'])
-
-#     return final_results, best_result
-
-
-
-# def train_ensemble(
-#     X, 
-#     y,
-#     xgb_params: dict,
-#     rf_params: dict,
-#     mean_type: Literal['geometric', 'arithmetic'] = 'arithmetic',
-#     k: int = 5,  # k-fold cross-validation
-#     verbose: int = 0
-# ):
-
-#     # Split the data using StratifiedKFold
-#     kf = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
-    
-#     weight_results = {}  # This will hold the accuracy and log_loss for each weight combination
-    
-#     weight_options = np.linspace(0, 1, 21)  # 0 to 1 in steps of 0.05
-    
-#     for train_idx, val_idx in kf.split(X, y):
-#         y_train, y_val = y[train_idx], y[val_idx]
-#         X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
-
-#         # Scale the data
-#         X_train_scaled, X_val_scaled = scale_data(X_train, X_val)
-
-#         # Create and fit the models
-#         xgb_model = Model(model_type='xgb', xgb_params=xgb_params)
-#         gnb_model = Model(model_type='gnb', selected_features=['x2', 'x3', 'x4', 'x6', 'x8', 'x9', 'x10', 'x11'])
-#         nn_model = Model(model_type='nn', nn_params=X_train_scaled.shape[1])
-#         rf_model = Model(model_type='rf', rf_params=rf_params)
-
-#         xgb_model.fit(X_train, y_train)
-#         gnb_model.fit(X_train, y_train)
-#         nn_model.fit(X_train_scaled, y_train, X_val=X_val_scaled, y_val=y_val, verbose=verbose)
-#         rf_model.fit(X_train, y_train)
-
-#         # Predict on validation set
-#         xgb_y_val_pred, xgb_y_val_proba = xgb_model.predict(X_val)
-#         gnb_y_val_pred, gnb_y_val_proba = gnb_model.predict(X_val)
-#         nn_y_val_pred, nn_y_val_proba = nn_model.predict(X_val_scaled)
-#         rf_y_val_pred, rf_y_val_proba = rf_model.predict(X_val)
-
-#         # Loop through weight options to find the best weights
-#         for w_xgb in weight_options:
-#             for w_gnb in weight_options:
-#                 if w_xgb + w_gnb <= 1:
-#                     w_nn = 1 - (w_xgb + w_gnb)
-
-#                     weighted_y_val_pred, weighted_y_val_proba = soft_voting(
-#                         list_X_preds=[xgb_y_val_proba, gnb_y_val_proba, nn_y_val_proba],
-#                         weights=[w_xgb, w_gnb, w_nn],
-#                         mean_type=mean_type
-#                     )
-
-#                     # Store accuracy and log_loss for this weight combination
-#                     weight_key = (round(w_xgb, 2), round(w_gnb, 2), round(w_nn, 2))
-#                     accuracy = accuracy_score(y_val, weighted_y_val_pred)
-#                     logloss = log_loss(y_val, weighted_y_val_proba)
-
-#                     if weight_key not in weight_results:
-#                         weight_results[weight_key] = {'accuracies': [], 'log_losses': []}
-                    
-#                     weight_results[weight_key]['accuracies'].append(accuracy)
-#                     weight_results[weight_key]['log_losses'].append(logloss)
-    
-#     # Now, calculate the mean and std for each weight combination
-#     final_results = []
-#     for weight_key, metrics in weight_results.items():
-#         accuracies = metrics['accuracies']
-#         log_losses = metrics['log_losses']
-
-#         mean_accuracy = np.mean(accuracies)
-#         std_accuracy = np.std(accuracies)
-#         mean_logloss = np.mean(log_losses)
-#         std_logloss = np.std(log_losses)
-
-#         final_results.append({
-#             'weights': weight_key,
-#             'mean_accuracy': mean_accuracy,
-#             'std_accuracy': std_accuracy,
-#             'mean_log_loss': mean_logloss,
-#             'std_log_loss': std_logloss
-#         })
-
-#     # Get the best result based on mean log_loss
-#     best_result = min(final_results, key=lambda x: x['mean_log_loss'])
-
-#     return final_results, best_result
-
-
+with open('params_rf.json', 'r') as file: 
+    rf_params = json.load(file)
 
 
 def train_ensemble(
     X, 
     y,
-    xgb_params: dict,
-    rf_params: dict,
+    models: List[Model] = [
+        Model(model_type='xgb', xgb_params=xgb_params), 
+        Model(model_type='gnb'), 
+        Model(model_type='nn', nn_params=X_train.shape[1]),
+        Model(model_type='rf', rf_params=rf_params)
+    ],
+    k_fold_type: Literal['kcv', 'shuffle_split'] = 'kcv',
     mean_type: Literal['geometric', 'arithmetic'] = 'arithmetic',
     k: int = 5,  # k-fold cross-validation
-    verbose: int = 0
+    verbose: int = 0,
+    weight_iterations: int = 31 
 ):
 
     # Split the data using StratifiedKFold
-    kf = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
-    
-    weight_results = {}  # This will hold the accuracy and log_loss for each weight combination
-    
-    # weight_options = np.linspace(0, 1, 21)  # 0 to 1 in steps of 0.05
-    weight_options = np.linspace(0, 1, 31)  # 0 to 1 in steps of 0.05
+    if k_fold_type == 'kcv':
+        kf = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
+    elif k_fold_type == 'shuffle_split':
+        kf = StratifiedShuffleSplit(n_splits=k, test_size=2/3, random_state=42)
+
+    weight_results = {}  # To hold the accuracy and log_loss for each weight combination
+    weight_options = np.linspace(0, 1, weight_iterations)
     
     for train_idx, val_idx in kf.split(X, y):
         y_train, y_val = y[train_idx], y[val_idx]
         X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
+        X_train_scaled, X_val_scaled = scale_data(X_train, X_val) # scale data for NN
 
-        # Scale the data
-        X_train_scaled, X_val_scaled = scale_data(X_train, X_val)
+        models_predictions = []
+        for model in models:
+            if model.model_type == 'nn':
+                model.fit(X_train_scaled, y_train, X_val=X_val_scaled, y_val=y_val, verbose=verbose)
+                models_predictions.append(model.predict(X_val_scaled)[1])
+            else: 
+                model.fit(X_train, y_train)
+                models_predictions.append(model.predict(X_val)[1])
+        # print(models_predictions)
+        # for model_pred in models_predictions:
+        #     print(model_pred.shape)
 
-        # Create and fit the models
-        xgb_model = Model(model_type='xgb', xgb_params=xgb_params)
-        gnb_model = Model(model_type='gnb', selected_features=['x2', 'x3', 'x4', 'x6', 'x8', 'x9', 'x10', 'x11'])
-        # gnb_model = Model(model_type='gnb')
-        nn_model = Model(model_type='nn', nn_params=X_train_scaled.shape[1])
-        rf_model = Model(model_type='rf', rf_params=rf_params)
-
-        xgb_model.fit(X_train, y_train)
-        gnb_model.fit(X_train, y_train)
-        nn_model.fit(X_train_scaled, y_train, X_val=X_val_scaled, y_val=y_val, verbose=verbose)
-        rf_model.fit(X_train, y_train)
-
-        # Prepare models and their predictions in lists for easier manipulation
-        models_predictions = [
-            xgb_model.predict(X_val)[1], 
-            gnb_model.predict(X_val)[1], 
-            nn_model.predict(X_val_scaled)[1], 
-            rf_model.predict(X_val)[1]
-        ]
-        
         # Loop through weight options to find the best weights
         weight_combinations = generate_weight_combinations(len(models_predictions), weight_options)
         
@@ -314,9 +149,6 @@ def train_ensemble(
     return final_results, best_result
 
 
-import numpy as np
-from itertools import product
-
 def generate_weight_combinations(num_models: int, weight_options: np.ndarray):
     """Generate all possible weight combinations for a given number of models where the weights sum to 1"""
     
@@ -331,3 +163,27 @@ def generate_weight_combinations(num_models: int, weight_options: np.ndarray):
                 weight_combinations.append(comb_sorted)
     
     return weight_combinations
+
+
+def show_top_weights(final_results, n_top=5):
+    # Sort by mean_accuracy (top 5 accuracies)
+    top_5_accuracies = sorted(final_results, key=lambda x: x['mean_accuracy'], reverse=True)[:n_top]
+
+    # Sort by mean_log_loss (bottom 5 log-losses)
+    bottom_5_loglosses = sorted(final_results, key=lambda x: x['mean_log_loss'])[:n_top]
+
+    print(f"Top {n_top} Accuracies:")
+    for i, result in enumerate(top_5_accuracies, 1):
+        print(f"{i}. Weights: {[round(float(w), 2) for w in result['weights']]} | "
+              f"Mean Accuracy: {result['mean_accuracy']:.3f} | "
+              f"Std Accuracy: {result['std_accuracy']:.3f} | "
+              f"Mean Log Loss: {result['mean_log_loss']:.3f} | "
+              f"Std Log Loss: {result['std_log_loss']:.3f}")
+
+    print(f"\nBottom {n_top} Log Losses:")
+    for i, result in enumerate(bottom_5_loglosses, 1):
+        print(f"{i}. Weights: {[round(float(w), 2) for w in result['weights']]} | "
+              f"Mean Accuracy: {result['mean_accuracy']:.3f} | "
+              f"Std Accuracy: {result['std_accuracy']:.3f} | "
+              f"Mean Log Loss: {result['mean_log_loss']:.3f} | "
+              f"Std Log Loss: {result['std_log_loss']:.3f}")
