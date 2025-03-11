@@ -1,5 +1,7 @@
-from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold
+from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold, cross_val_score
 from sklearn.metrics import accuracy_score, log_loss
+from sklearn.feature_selection import SequentialFeatureSelector
+
 import numpy as np
 import pandas as pd
 import xgboost as xgb
@@ -31,3 +33,37 @@ def hyperparam_tuning(X_train, y_train, k=5, n_iter=20) -> RandomizedSearchCV:
     print("Best accuracy score:", random_search.best_score_)
     
     return random_search
+
+
+def select_features_xgb(X_train, y_train, n_features: int = 10, cv_folds: int = 5):
+    """
+    Performs feature selection using XGBoost and Sequential Feature Selector.
+    
+    Parameters:
+        X_train (pd.DataFrame): Training feature set
+        y_train (pd.Series or np.array): Target labels
+        n_features (int): Number of top features to select
+        cv_folds (int): Number of cross-validation folds
+    
+    Returns:
+        List[str]: Selected feature names
+    """
+    
+    # Initialize XGBoost classifier
+    xgb_clf = xgb.XGBClassifier(use_label_encoder=False, eval_metric='mlogloss')
+    
+    # Define cross-validation strategy
+    cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=42)
+    
+    # Use Sequential Feature Selector (SFS) to select the best features
+    sfs = SequentialFeatureSelector(
+        xgb_clf, n_features_to_select=n_features, direction='forward', cv=cv, scoring='accuracy', n_jobs=-1
+    )
+    
+    sfs.fit(X_train, y_train)
+    
+    # Get the selected feature names
+    selected_features = X_train.columns[sfs.get_support()].tolist()
+    
+    print(f"Selected Features: {selected_features}")
+    return selected_features
